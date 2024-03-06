@@ -14,37 +14,37 @@ class FirstPersonAction extends BaseClass
         $currentX = $this->getCurrentX();
         $currentY = $this->getCurrentY();
         $currentAngle = $this->getCurrentAngle();
-
-        error_log("x for checkAction" . $currentX);
-        error_log("Y for checkAction" . $currentY);
-        error_log("° for checkAction" . $currentAngle);
+        $statusAction = $this->getStatusAction();
 
         // Vérifie si les coordonnées actuelles sont définies
-        if ($currentX !== null && $currentY !== null && $currentAngle !== null) {
+        if ($currentX !== null && $currentY !== null && $currentAngle !== null && $statusAction !== null) {
 
-            $query = "SELECT * 
+            // Vérifie l'état de l'inventaire
+            $inventoryEmpty = $_SESSION['inventoryEmpty'];
+
+            $actionTrue = "SELECT `action` 
                FROM `actions` 
                JOIN `map` ON map.id = actions.map_id 
                WHERE `coordx` = :currentX 
                AND `coordy` = :currentY 
-               AND `direction` = :currentAngle";
+               AND `direction` = :currentAngle
+               AND actions.status = :statusAction ";
 
             try {
 
-                $stmt = $this->getDbh()->prepare($query);
+                $stmt = $this->getDbh()->prepare($actionTrue);
                 $stmt->bindParam(':currentX', $currentX, PDO::PARAM_INT);
                 $stmt->bindParam(':currentY', $currentY, PDO::PARAM_INT);
                 $stmt->bindParam(':currentAngle', $currentAngle, PDO::PARAM_INT);
+                $stmt->bindParam(':statusAction', $statusAction, PDO::PARAM_INT);
                 $stmt->execute();
 
-                $result = $stmt->fetch(PDO::FETCH_ASSOC);
-                error_log("result:" . print_r($result, 1));
-
-                // Si un résultat est trouvé, retourner true. 
-                if (!empty($result)) {
-                    return true;
+                $resultActionTrue = $stmt->fetch(PDO::FETCH_ASSOC);
+                if (!empty($resultActionTrue) && $resultActionTrue['action'] === 'take') {
+                    return $inventoryEmpty;
+                } else if (!empty($resultActionTrue) && $resultActionTrue['action'] === 'use') {
+                    return !$inventoryEmpty;
                 } else {
-                    // Sinon, retourner false.
                     return false;
                 }
             } catch (PDOException $e) {
@@ -53,7 +53,7 @@ class FirstPersonAction extends BaseClass
             }
         }
         // Si les coordonnées actuelles ne sont pas définies, retourner false 
+        error_log("CA : Error");
         return false;
     }
-
 }

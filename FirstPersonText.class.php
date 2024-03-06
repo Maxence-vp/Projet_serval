@@ -14,35 +14,32 @@ class FirstPersonText extends BaseClass
         $currentX = $this->getCurrentX();
         $currentY = $this->getCurrentY();
         $currentAngle = $this->getCurrentAngle();
-
-        error_log("x for txt " . $currentX);
-        error_log("Y for txt " . $currentY);
-        error_log("° for txt " . $currentAngle); 
+        $statusAction = $this->getStatusAction();
 
         // Vérifie si les coordonnées actuelles sont définies
-        if ($currentX !== null && $currentY !== null && $currentAngle !== null) {
+        if ($currentX !== null && $currentY !== null && $currentAngle !== null && $statusAction !== null) {
     
-            $query = "SELECT `text` 
+            $selectText = "SELECT `text` 
                       FROM `text` 
                       JOIN `map` ON map.id = text.map_id 
                       WHERE `coordx` = :currentX 
                       AND `coordy` = :currentY 
-                      AND `direction` = :currentAngle";
+                      AND `direction` = :currentAngle
+                      AND text.status_action = :statusAction";
 
             try {
 
-                $stmt = $this->getDbh()->prepare($query);
+                $stmt = $this->getDbh()->prepare($selectText);
                 $stmt->bindParam(':currentX', $currentX, PDO::PARAM_INT);
                 $stmt->bindParam(':currentY', $currentY, PDO::PARAM_INT);
                 $stmt->bindParam(':currentAngle', $currentAngle, PDO::PARAM_INT);
+                $stmt->bindParam(':statusAction', $statusAction, PDO::PARAM_INT);
                 $stmt->execute();
 
-                $result = $stmt->fetch(PDO::FETCH_ASSOC);
-                error_log("result txt:" .print_r($result, 1));
-
+                $resultSelectText = $stmt->fetch(PDO::FETCH_ASSOC);
                 // Si un résultat est trouvé, retourner le text de l'image. 
-                if (!empty($result) && isset($result['text'])) {
-                    return $result["text"]; 
+                if (!empty($resultSelectText) && isset($resultSelectText['text'])) {
+                    return $resultSelectText["text"]; 
                 } else {
                     return ""; 
                 }
@@ -54,7 +51,7 @@ class FirstPersonText extends BaseClass
         }
 
         // Si les coordonnées actuelles ne sont pas définies, retourner le chemin de l'image par défaut
-        return error_log("error text 2"); 
+        return error_log("txt : error"); 
     }
 }
 

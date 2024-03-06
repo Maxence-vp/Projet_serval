@@ -7,6 +7,9 @@ class BaseClass
     private ?int $_currentX = null; // Déclare une propriété privée contenant la coordonnée X actuelle, pouvant être nulle.
     private ?int $_currentY = null; // Déclare une propriété privée contenant la coordonnée Y actuelle, pouvant être nulle.
     private ?int $_currentAngle = null; // Déclare une propriété privée contenant l'angle actuel, pouvant être nul.
+    private ?int $_statusAction = null; // Déclare une propriété privée contenant le status, pouvant être nul.
+
+    const IMAGES_FOLDER = './images/';
 
     // Méthode statique pour récupérer l'instance unique de BaseClass
     public static function getInstance(): BaseClass
@@ -96,6 +99,22 @@ class BaseClass
     {
         return $this->_currentAngle;
     }
+
+    public function setStatusAction(?int $statusAction): void
+    {
+        if (is_int($statusAction) && ($statusAction === 0 || $statusAction === 1)) {
+            $this->_statusAction = $statusAction;
+        } else {
+            throw new InvalidArgumentException("
+            status is egal to 0 or 1");
+        }
+    }
+
+    public function getStatusAction(): ?int
+    {
+        return $this->_statusAction;
+    }
+
 
     // Méthode privée pour vérifier si un mouvement est possible.
     private function _checkMove(?int $currentX, ?int $currentY, ?int $currentAngle): bool
@@ -285,8 +304,6 @@ class BaseClass
                 --$this->_currentX;
                 break;
         }
-
-        error_log("Movement goForward made");
     }
 
     public function goBack(): void
@@ -306,8 +323,6 @@ class BaseClass
                 ++$this->_currentX;
                 break;
         }
-
-        error_log("Movement goBack made");
     }
 
     public function goRight(): void
@@ -327,8 +342,6 @@ class BaseClass
                 ++$this->_currentX;
                 break;
         }
-
-        error_log("Movement goRight made");
     }
 
     public function goLeft(): void
@@ -348,8 +361,6 @@ class BaseClass
                 --$this->_currentY;
                 break;
         }
-
-        error_log("Movement goLeft made");
     }
 
     // Les méthodes turnRight et turnLeft modifient l'angle actuel du personnage dans le sens horaire et antihoraire, respectivement.
@@ -370,8 +381,6 @@ class BaseClass
                 $this->_currentAngle = 90;
                 break;
         }
-
-        error_log("Movement turnRight made");
     }
 
     public function turnLeft(): void
@@ -391,14 +400,43 @@ class BaseClass
                 $this->_currentAngle = 270;
                 break;
         }
-
-        error_log("Movement turnLeft made");
     }
 
     public function doAction()
     {
-        if (isset($_POST['action'])) {
-            error_log("Action 'goEnter' executed");
+        // Récupére les coordonnées actuelles du joueur
+        $currentX = $this->getCurrentX();
+        $currentY = $this->getCurrentY();
+        $currentAngle = $this->getCurrentAngle();
+        $statusAction = $this->getStatusAction();
+
+        if ($currentX !== null && $currentY !== null && $currentAngle !== null && $statusAction !== null) {
+
+            $actionsTakeUse = "SELECT `path`
+                FROM `images` 
+                JOIN `actions` ON images.map_id = actions.map_id 
+                JOIN `map` ON images.map_id = map.id 
+                WHERE `coordx` = :currentX 
+                AND `coordy` = :currentY 
+                AND `direction` = :currentAngle
+                AND images.status_action = 1";
+
+            $stmtT = $this->getDbh()->prepare($actionsTakeUse);
+            $stmtT->bindParam(':currentX', $currentX, PDO::PARAM_INT);
+            $stmtT->bindParam(':currentY', $currentY, PDO::PARAM_INT);
+            $stmtT->bindParam(':currentAngle', $currentAngle, PDO::PARAM_INT);
+            $stmtT->execute();
+
+            $resultTakeUse = $stmtT->fetch(PDO::FETCH_ASSOC);
+            if ($resultTakeUse !== false && $resultTakeUse['path'] === '12-90-1.jpg') {
+                $_SESSION['inventoryEmpty'] = false; 
+                return self::IMAGES_FOLDER . $resultTakeUse['path'];
+            } else if ($resultTakeUse !== false && $resultTakeUse['path'] === '01-180-1.gif') {
+                $_SESSION['inventoryEmpty'] = true; 
+                return self::IMAGES_FOLDER . $resultTakeUse['path'];
+            }
+        } else {
+            return self::IMAGES_FOLDER . 'doom-error.png';
         }
     }
 
